@@ -12,9 +12,6 @@ The SQL workflow performs the following:
 - Calculating key metrics such as:
   - Cases and deaths as a percentage of population
   - Deaths as a percentage of total cases
-- Comparing total deaths before and after the onset of COVID-19 vaccination campaigns
-- Analyzing vaccination coverage and vaccination-to-case ratios
-- Creating a curated dataset with relevant health, demographic, and socioeconomic features for downstream analysis
 
 ## Key Queries and Features
 
