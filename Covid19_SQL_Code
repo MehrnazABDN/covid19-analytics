@@ -1,0 +1,173 @@
+SELECT * FROM compact;
+
+EXEC sp_rename 'compact', 'covid_data';
+
+
+SELECT * FROM covid_data;
+
+SELECT COLUMN_NAME
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'covid_data';
+
+
+SELECT DISTINCT country
+FROM covid_data
+ORDER BY country;
+
+WITH latest_data AS (
+    SELECT country, MAX(date) AS latest_date
+    FROM covid_data
+    GROUP BY country
+),
+metrics AS (
+    SELECT 
+        c.country,
+        c.date,
+        c.total_cases,
+        c.total_deaths,
+        c.population,
+        ROUND((CAST(c.total_cases AS FLOAT) / NULLIF(c.population, 0)) * 100, 2) AS case_vs_population_pct,
+        ROUND((CAST(c.total_deaths AS FLOAT) / NULLIF(c.population, 0)) * 100, 2) AS death_vs_population_pct,
+        ROUND((CAST(c.total_deaths AS FLOAT) / NULLIF(c.total_cases, 0)) * 100, 2) AS death_vs_case_pct
+    FROM covid_data c
+    JOIN latest_data l ON c.country = l.country AND c.date = l.latest_date
+    WHERE c.country NOT IN (
+        'World', 'Asia', 'Europe', 'Africa',
+        'North America', 'South America', 'Oceania',
+        'World excl. China', 'World excl. China and South Korea',
+        'World excl. China, South Korea, Japan and Singapore',
+        'Asia excl. China', 'European Union (27)',
+        'High-income countries', 'Upper-middle-income countries',
+        'Lower-middle-income countries', 'Low-income countries'
+    )
+)
+
+SELECT TOP 20 * FROM metrics ORDER BY case_vs_population_pct DESC;
+
+
+
+-- Total deaths before 2021-02-22
+SELECT country, SUM(total_deaths) AS deaths_before_vax
+FROM covid_data
+WHERE date < '2021-02-22'
+GROUP BY country
+ORDER BY deaths_before_vax DESC;
+
+-- Total deaths on and after 2021-02-22
+SELECT country, SUM(total_deaths) AS deaths_after_vax
+FROM covid_data
+WHERE date >= '2021-02-22'
+GROUP BY country
+ORDER BY deaths_after_vax DESC;
+
+
+WITH latest_vax AS (
+    SELECT 
+        country,
+        MAX(date) AS latest_date
+    FROM country_vaccinations
+    GROUP BY country
+),
+vax_latest AS (
+    SELECT 
+        v.country,
+        v.total_vaccinations,
+        v.people_vaccinated,
+        v.population
+    FROM country_vaccinations v
+    JOIN latest_vax l ON v.country = l.country AND v.date = l.latest_date
+)
+
+SELECT 
+    country,
+    total_vaccinations,
+    population,
+    ROUND(CAST(total_vaccinations AS FLOAT) / NULLIF(population, 0), 4) AS vax_per_population
+FROM vax_latest
+ORDER BY vax_per_population DESC;
+
+
+
+WITH latest_vax AS (
+    SELECT 
+        country,
+        MAX(date) AS latest_date
+    FROM country_vaccinations
+    GROUP BY country
+),
+vax_latest AS (
+    SELECT 
+        v.country,
+        v.total_vaccinations
+    FROM country_vaccinations v
+    JOIN latest_vax l ON v.country = l.country AND v.date = l.latest_date
+),
+latest_cases AS (
+    SELECT 
+        country,
+        MAX(date) AS latest_date
+    FROM covid_data
+    GROUP BY country
+),
+cases_latest AS (
+    SELECT 
+        c.country,
+        c.total_cases
+    FROM covid_data c
+    JOIN latest_cases lc ON c.country = lc.country AND c.date = lc.latest_date
+)
+
+SELECT
+    v.country,
+    v.total_vaccinations,
+    c.total_cases,
+    ROUND(CAST(v.total_vaccinations AS FLOAT) / NULLIF(c.total_cases, 0), 4) AS vaccination_to_case_ratio
+FROM vax_latest v
+JOIN cases_latest c ON v.country = c.country
+ORDER BY vaccination_to_case_ratio DESC;
+
+
+
+-- Create a new table with the selected columns
+SELECT 
+    country,
+    date,
+    total_cases,
+    new_cases,
+    total_deaths,
+    new_deaths,
+    excess_mortality,
+    excess_mortality_cumulative,
+    excess_mortality_cumulative_absolute,
+    excess_mortality_cumulative_per_million,
+    hosp_patients,
+    weekly_hosp_admissions,
+    icu_patients,
+    weekly_icu_admissions,
+    total_tests,
+    new_tests,
+    positive_rate,
+    tests_per_case,
+    total_vaccinations,
+    people_vaccinated,
+    people_fully_vaccinated,
+    total_boosters,
+    new_vaccinations,
+    total_vaccinations_per_hundred,
+    people_vaccinated_per_hundred,
+    people_fully_vaccinated_per_hundred,
+    total_boosters_per_hundred,
+    new_vaccinations_smoothed_per_million,
+    code,
+    continent,
+    population,
+    population_density,
+    median_age,
+    life_expectancy,
+    gdp_per_capita,
+    diabetes_prevalence
+INTO covid_selected_columns
+FROM covid_data;
+
+
+SELECT TOP 100 * FROM covid_selected_columns;
