@@ -36,11 +36,7 @@ The SQL workflow performs the following:
 - Excludes aggregated regional data (e.g., continents, income groups) to focus on individual countries.
 - Date `'2021-02-22'` is used as a cut-off to compare pre- and post-vaccination death counts.
 
-## License
 
-[MIT License](LICENSE)
 
----
 
-Feel free to open issues or pull requests if you want to contribute!
 
